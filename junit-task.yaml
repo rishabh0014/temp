@@ -1,0 +1,51 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: junit-task
+spec:
+  params:
+    - name: testCommand
+      type: string
+      default: "mvn test"
+    - name: reportPath
+      type: string
+      default: "target/surefire-reports/*.xml"
+  workspaces:
+    - name: source
+    - name: test-reports
+  steps:
+    - name: copy-source
+      image: busybox
+      script: |
+        echo "Copying source files to workspace"
+        cp -r /workspace/source/* /workspace/
+        ls
+        echo "----------------"
+        echo "----------------"
+        cd /workspace/source
+        ls
+        echo "----------------"
+        echo "----------------"
+        # cd /Desktop/PE
+        # ls
+        # echo "----------------"
+        # echo "----------------"
+        # cd ..
+        # cd ..
+        # echo "----------------"
+        # echo "----------------"
+        cat junit-task.yaml
+        echo "----------------"
+        echo "----------------"
+    - name: run-tests
+      image: maven:3.6.3-jdk-11
+      workingDir: /workspace
+      script: |
+        echo "Running tests with command: $(params.testCommand)"
+        $(params.testCommand)
+    
+    - name: copy-reports
+      image: busybox
+      script: |
+        echo "Copying JUnit test reports to workspace"
+        cp -r $(params.reportPath) /workspace/test-reports/

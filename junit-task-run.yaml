@@ -1,0 +1,18 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: junit-task-run
+spec:
+  taskRef:
+    name: junit-task
+  params:
+    - name: testCommand
+      value: "mvn test"
+    - name: reportPath
+      value: "target/surefire-reports/*.xml"
+  workspaces:
+    - name: source
+      persistentVolumeClaim:
+        claimName: source-code-pvc
+    - name: test-reports
+      emptyDir: {}
