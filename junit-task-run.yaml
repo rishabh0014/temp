@@ -9,10 +9,11 @@ spec:
     - name: testCommand
       value: "mvn test"
     - name: reportPath
-      value: "target/surefire-reports/*.xml"
+      value: "/workspace/source/target/surefire-reports/*.xml"
+    - name: gitRepo
+      value: "https://github.com/rishabh0014/temp.git"
   workspaces:
     - name: source
-      persistentVolumeClaim:
-        claimName: source-code-pvc
+      emptyDir: {} # or persistentVolumeClaim if you're using PVC
     - name: test-reports
       emptyDir: {}
