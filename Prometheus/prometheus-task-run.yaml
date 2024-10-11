@@ -1,0 +1,25 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: prometheus-query-run-1
+spec:
+  taskRef:
+    name: prometheus-query
+  workspaces:
+    - name: prometheus-config
+      emptyDir: {}
+  params:
+    - name: PROMETHEUS_URL
+      value: "localhost:9090"
+    - name: PROMQL_QUERY
+      value: "sum(rate(container_fs_usage_bytes[5m])) by (instance)"
+    - name: TIMEOUT
+      value: "15"
+    - name: USERNAME
+      value: "admin"
+    - name: PASSWORD
+      value: "admin"
+    - name: OUTPUT_FILE
+      value: "prometheus_result.json"
+  serviceAccountName: prometheus-query-sa
+  timeout: "5m"

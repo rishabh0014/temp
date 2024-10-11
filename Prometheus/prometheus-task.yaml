@@ -1,0 +1,128 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: prometheus-query
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/deprecated: "false"
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/categories: Monitoring
+    tekton.dev/tags: monitoring, prometheus
+    tekton.dev/displayName: "Prometheus Query"
+    tekton.dev/platforms: "linux/amd64"
+spec:
+  description: >
+    This task queries a Prometheus server for specific metrics using a PromQL query.
+    It supports basic authentication using username and password.
+
+  workspaces:
+    - name: prometheus-config
+      description: "Workspace containing Prometheus configuration files (optional)"
+      optional: true
+
+  params:
+    - name: PROMETHEUS_URL
+      description: "URL of the Prometheus server (e.g., http://prometheus:9090)"
+      default: ""
+    - name: PROMQL_QUERY
+      description: "PromQL query to execute against Prometheus"
+      default: ""
+    - name: TIMEOUT
+      description: "Timeout for the Prometheus query in seconds"
+      default: "10"
+    - name: USERNAME
+      description: "Username for basic authentication"
+      default: ""
+    - name: PASSWORD
+      description: "Password for basic authentication"
+      default: ""
+    - name: OUTPUT_FILE
+      description: "Path to store the query result"
+      default: "result.json"
+
+  results:
+    - name: query-result
+      description: "The raw JSON response from Prometheus"
+
+  steps:
+    - name: query-prometheus
+      image: curlimages/curl:7.85.0
+      workingDir: /workspace/source
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        if [ -z "${PROMETHEUS_URL}" ]; then
+          echo "Error: PROMETHEUS_URL is not set."
+          exit 1
+        fi
+
+        if [ -z "${PROMQL_QUERY}" ]; then
+          echo "Error: PROMQL_QUERY is not set."
+          exit 1
+        fi
+
+        if [ -z "${USERNAME}" ] || [ -z "${PASSWORD}" ]; then
+          echo "Error: Username or password for authentication is not provided."
+          exit 1
+        fi
+
+        echo "Querying Prometheus at ${PROMETHEUS_URL} with query: ${PROMQL_QUERY}"
+
+        # Encode username and password for basic authentication
+        AUTH_HEADER=$(echo -n "${USERNAME}:${PASSWORD}" | base64)
+
+        RESPONSE=$(curl -s -G "${PROMETHEUS_URL}/api/v1/query" \
+          --data-urlencode "query=${PROMQL_QUERY}" \
+          --header "Authorization: Basic ${AUTH_HEADER}" \
+          --max-time "${TIMEOUT}")
+
+        echo "Response received from Prometheus:"
+        echo "${RESPONSE}"
+
+        echo "${RESPONSE}" > "${OUTPUT_FILE}"
+
+        # Optionally, set the result to be used in subsequent tasks
+        echo "query-result=$(cat ${OUTPUT_FILE})" >> $(results.query-result.path)
+
+      env:
+        - name: PROMETHEUS_URL
+          value: "$(params.PROMETHEUS_URL)"
+        - name: PROMQL_QUERY
+          value: "$(params.PROMQL_QUERY)"
+        - name: TIMEOUT
+          value: "$(params.TIMEOUT)"
+        - name: USERNAME
+          value: "$(params.USERNAME)"
+        - name: PASSWORD
+          value: "$(params.PASSWORD)"
+        - name: OUTPUT_FILE
+          value: "$(params.OUTPUT_FILE)"
+
+    - name: process-response
+      image: python:3.9-slim
+      script: |
+        #!/usr/bin/env python3
+        import json
+        import os
+
+        output_file = os.getenv('OUTPUT_FILE', 'result.json')
+
+        with open(output_file, 'r') as f:
+            data = json.load(f)
+
+        # Example processing: Check if there are any results
+        if data['status'] != 'success':
+            print("Prometheus query failed.")
+            exit(1)
+
+        if not data['data']['result']:
+            print("No results found for the query.")
+            exit(1)
+
+        print(f"Query successful with {len(data['data']['result'])} result(s).")
+
+      env:
+        - name: OUTPUT_FILE
+          value: "$(params.OUTPUT_FILE)"
