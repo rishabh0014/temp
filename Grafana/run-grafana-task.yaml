@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: run-grafana
+spec:
+  workspaces:
+    - name: grafana-storage
+      description: "Workspace for Grafana configuration and data"
+  
+  steps:
+    - name: setup-grafana
+      image: grafana/grafana:latest
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "Starting Grafana..."
+          grafana-server \
+            --config=/workspace/grafana-storage/grafana.ini \
+            --homepath=/usr/share/grafana \
+            --data=/var/lib/grafana

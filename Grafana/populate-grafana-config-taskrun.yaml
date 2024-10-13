@@ -1,0 +1,11 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: populate-grafana-config-run
+spec:
+  taskRef:
+    name: populate-grafana-config
+  workspaces:
+    - name: grafana-storage
+      persistentVolumeClaim:
+        claimName: grafana-pvc

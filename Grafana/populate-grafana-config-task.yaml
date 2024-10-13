@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: populate-grafana-config
+spec:
+  workspaces:
+    - name: grafana-storage
+      description: "Workspace for Grafana configuration and data"
+  steps:
+    - name: copy-config
+      image: bitnami/kubectl:latest
+      script: |
+        #!/bin/sh
+        set -e
+
+        # Mount the ConfigMap as a temporary file
+        echo "Extracting grafana.ini from ConfigMap..."
+        kubectl get configmap grafana-config -o jsonpath='{.data.grafana\.ini}' > /workspace/grafana-storage/grafana.ini
+
+        echo "grafana.ini has been copied to the PVC."
