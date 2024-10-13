@@ -1,0 +1,25 @@
+kubectl apply -f prometheus-config-pvc.yaml
+kubectl apply -f prometheus-data-pvc.yaml
+
+kubectl apply -f role.yaml
+kubectl apply -f prometheus-pvc.yaml
+
+kubectl apply -f pvc-access-pod.yaml
+
+
+
+
+kubectl apply -f run-prometheus.yaml
+kubectl apply -f run-prometheus-run.yaml
+
+
+
+kubectl delete task run-prometheus
+kubectl delete taskrun run-prometheus-run
+kubectl delete pvc prometheus-pvc
+
+tkn taskrun logs run-prometheus-run -f
+
+kubectl describe taskrun run-prometheus-run
+
+kubectl port-forward svc/prometheus-service 9090:9090
